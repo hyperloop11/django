@@ -17,7 +17,8 @@ from unittest import mock, skipIf
 from django.conf import settings
 from django.core import management, signals
 from django.core.cache import (
-    DEFAULT_CACHE_ALIAS, CacheKeyWarning, InvalidCacheKey, cache, caches,
+    DEFAULT_CACHE_ALIAS, CacheHandler, CacheKeyWarning, InvalidCacheKey, cache,
+    caches,
 )
 from django.core.cache.backends.base import InvalidCacheBackendError
 from django.core.cache.utils import make_template_fragment_key
@@ -2499,3 +2500,21 @@ class CacheHandlerTest(SimpleTestCase):
             t.join()
 
         self.assertIsNot(c[0], c[1])
+
+    def test_nonexistent_alias(self):
+        msg = "The connection 'nonexistent' doesn't exist."
+        with self.assertRaisesMessage(InvalidCacheBackendError, msg):
+            caches['nonexistent']
+
+    def test_nonexistent_backend(self):
+        test_caches = CacheHandler({
+            'invalid_backend': {
+                'BACKEND': 'django.nonexistent.NonexistentBackend',
+            },
+        })
+        msg = (
+            "Could not find backend 'django.nonexistent.NonexistentBackend': "
+            "No module named 'django.nonexistent'"
+        )
+        with self.assertRaisesMessage(InvalidCacheBackendError, msg):
+            test_caches['invalid_backend']
